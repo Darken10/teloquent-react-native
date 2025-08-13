@@ -2,7 +2,7 @@
  * Classe de base pour toutes les relations
  */
 import { Model } from '../core/Model';
-import { Query } from '../core/Query';
+import { Query } from '../query/Query';
 import { Collection } from '../core/Collection';
 
 export abstract class Relation<T extends Model = Model> {

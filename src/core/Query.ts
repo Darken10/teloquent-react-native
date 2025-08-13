@@ -5,6 +5,7 @@ import { DB } from './DB';
 import { Collection } from './Collection';
 import { Model } from './Model';
 import { WhereCondition, OrderByClause, WhereOperator } from '../types';
+import { Relation } from '../relations/Relation';
 
 export class Query<M extends Model = Model> {
   protected _table: string;
@@ -38,16 +39,16 @@ export class Query<M extends Model = Model> {
   /**
    * Ajouter une clause WHERE
    */
-  public where(column: string, operator: WhereOperator | any, value?: any, boolean: 'and' | 'or' = 'and'): this {
+  public where(column: string, operator: WhereOperator | string | number | boolean | null | undefined, value?: string | number | boolean | null | undefined | (string | number | boolean | null | undefined)[], boolean: 'and' | 'or' = 'and'): this {
     // Gérer le cas où l'opérateur est omis (where('column', value))
     if (value === undefined) {
       value = operator;
-      operator = '=';
+      operator = '=' as WhereOperator;
     }
 
     this._wheres.push({
       column,
-      operator,
+      operator: operator as WhereOperator,
       value,
       boolean
     });
@@ -58,14 +59,14 @@ export class Query<M extends Model = Model> {
   /**
    * Ajouter une clause WHERE avec OR
    */
-  public orWhere(column: string, operator: WhereOperator | any, value?: any): this {
+  public orWhere(column: string, operator: WhereOperator | string | number | boolean | null | undefined, value?: string | number | boolean | null | undefined | (string | number | boolean | null | undefined)[]): this {
     return this.where(column, operator, value, 'or');
   }
 
   /**
    * Ajouter une clause WHERE IN
    */
-  public whereIn(column: string, values: any[], boolean: 'and' | 'or' = 'and'): this {
+  public whereIn(column: string, values: (string | number | boolean | null | undefined)[], boolean: 'and' | 'or' = 'and'): this {
     this._wheres.push({
       column,
       operator: 'IN',
@@ -79,7 +80,7 @@ export class Query<M extends Model = Model> {
   /**
    * Ajouter une clause WHERE NOT IN
    */
-  public whereNotIn(column: string, values: any[], boolean: 'and' | 'or' = 'and'): this {
+  public whereNotIn(column: string, values: (string | number | boolean | null | undefined)[], boolean: 'and' | 'or' = 'and'): this {
     this._wheres.push({
       column,
       operator: 'NOT IN',
@@ -173,7 +174,7 @@ export class Query<M extends Model = Model> {
   /**
    * Ajouter une clause HAVING
    */
-  public having(column: string, operator: WhereOperator | any, value?: any, boolean: 'and' | 'or' = 'and'): this {
+  public having(column: string, operator: WhereOperator | string | number | boolean | null | undefined, value?: string | number | boolean | null | undefined | (string | number | boolean | null | undefined)[], boolean: 'and' | 'or' = 'and'): this {
     // Gérer le cas où l'opérateur est omis
     if (value === undefined) {
       value = operator;
@@ -182,7 +183,7 @@ export class Query<M extends Model = Model> {
 
     this._havings.push({
       column,
-      operator,
+      operator: operator as WhereOperator,
       value,
       boolean
     });
@@ -201,9 +202,9 @@ export class Query<M extends Model = Model> {
   /**
    * Construire la requête SQL
    */
-  protected buildQuery(): { sql: string; params: any[] } {
+  protected buildQuery(): { sql: string; params: (string | number | boolean | null | undefined)[] } {
     let sql = `SELECT ${this._selects.join(', ')} FROM ${this._table}`;
-    const params: any[] = [];
+    const params: (string | number | boolean | null | undefined)[] = [];
 
     // Ajouter les JOINs
     if (this._joins.length > 0) {
@@ -285,7 +286,7 @@ export class Query<M extends Model = Model> {
     const models = results.map(result => {
       const model = new this._modelClass() as M;
       model.fill(result);
-      model.exists = true;
+      (model as any).exists = true; // Utilisation de cast pour accéder à la propriété protégée
       return model;
     });
 
@@ -345,7 +346,7 @@ export class Query<M extends Model = Model> {
   /**
    * Mettre à jour des enregistrements
    */
-  public async update(data: Record<string, any>): Promise<number> {
+  public async update(data: Record<string, string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[]>): Promise<number> {
     const { sql: whereSql, params: whereParams } = this.buildWhereClause();
     return DB.update(this._table, data, whereSql, whereParams);
   }
@@ -361,9 +362,9 @@ export class Query<M extends Model = Model> {
   /**
    * Construire uniquement la clause WHERE
    */
-  protected buildWhereClause(): { sql: string; params: any[] } {
+  protected buildWhereClause(): { sql: string; params: (string | number | boolean | null | undefined)[] } {
     let sql = '1=1'; // Clause par défaut pour éviter les erreurs si aucun WHERE
-    const params: any[] = [];
+    const params: (string | number | boolean | null | undefined)[] = [];
 
     if (this._wheres.length > 0) {
       sql = '';
@@ -404,16 +405,20 @@ export class Query<M extends Model = Model> {
     }
 
     for (const relation of this._relations) {
-      const relationMethod = relation.split('.')[0];
+      const relationName = relation.split('.')[0];
       
-      // Vérifier si la méthode de relation existe
-      if (typeof collection.first()[relationMethod] !== 'function') {
-        console.warn(`La relation "${relationMethod}" n'existe pas sur le modèle ${this._modelClass.name}`);
+      // Vérifier si la collection n'est pas vide et si la méthode de relation existe
+      const firstModel = collection.first();
+      if (!firstModel || typeof firstModel[relationName] !== 'function') {
+        console.warn(`La relation "${relationName}" n'existe pas sur le modèle ${this._modelClass.name}`);
         continue;
       }
 
       // Obtenir l'instance de relation
-      const relationInstance = collection.first()[relationMethod]();
+      const relationKey = relationName as keyof typeof firstModel;
+      // Utiliser une signature de fonction spécifique au lieu de Function
+      const relationFunction = firstModel[relationKey] as (...args: unknown[]) => unknown;
+      const relationInstance = relationFunction.call(firstModel) as Relation<M>;
       
       // Charger la relation pour tous les modèles de la collection
       await relationInstance.loadForCollection(collection, relation);

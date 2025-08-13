@@ -2,15 +2,32 @@
  * Classe Model - La classe de base pour tous les modèles Teloquent
  */
 import { DB } from './DB';
-import { Query } from './Query';
+import { Query } from '../query/Query';
 import { Collection } from './Collection';
-import { ModelAttributes, ModelOptions, ModelEvent } from '../types';
-import { pluralize, singularize } from '../utils/inflector';
+import { ModelAttributes, ModelEvent } from '../types';
+import pluralize from 'pluralize';
+import { singularize } from '../utils/inflector';
 import { HasOne } from '../relations/HasOne';
 import { HasMany } from '../relations/HasMany';
 import { BelongsTo } from '../relations/BelongsTo';
 import { BelongsToMany } from '../relations/BelongsToMany';
 
+// Définition des types pour les méthodes statiques
+type ModelClass<T extends Model = Model> = {
+  new(): T;
+  table?: string;
+  primaryKey: string;
+  timestamps: boolean;
+  name: string;
+  getTable(): string;
+  query(): Query<T>;
+  find<U extends Model>(id: string | number): Promise<U | null>;
+  create<U extends Model>(attributes: ModelAttributes): Promise<U>;
+};
+
+/**
+ * Classe Model - La classe de base pour tous les modèles Teloquent
+ */
 export class Model {
   // Propriétés statiques pour la configuration du modèle
   public static table?: string;
@@ -20,11 +37,16 @@ export class Model {
   public static connection?: string;
 
   // Propriétés d'instance
-  public exists: boolean = false;
   protected attributes: ModelAttributes = {};
   protected original: ModelAttributes = {};
   protected changes: ModelAttributes = {};
-  protected relations: Record<string, Model | Collection<Model>> = {};
+  protected relations: Record<string, Model | Collection<Model> | null> = {};
+  protected exists: boolean = false;
+  protected primaryKey: string = 'id';
+  
+  // Permettre l'accès aux attributs comme des propriétés
+  [key: string]: string | number | boolean | null | undefined | ((...args: unknown[]) => unknown) | object;
+
   protected casts: Record<string, string> = {};
   protected hidden: string[] = [];
   protected visible: string[] = [];
@@ -69,31 +91,37 @@ export class Model {
     return this.primaryKey;
   }
 
+  // La méthode getTable est déjà définie plus haut
+
   /**
    * Créer une nouvelle instance de Query pour ce modèle
    */
-  public static query(): Query {
-    return new Query(this, this.getTable());
+  public static query<T extends Model>(this: ModelClass<T>): Query<T> {
+    const modelClass = this as unknown as typeof Model;
+    const table = this.getTable();
+    return new Query<T>(modelClass, table);
   }
 
   /**
    * Obtenir tous les enregistrements
    */
-  public static async all<T extends Model>(this: new () => T): Promise<Collection<T>> {
-    return this.query().get() as Promise<Collection<T>>;
+  public static async all<T extends Model>(this: ModelClass<T>): Promise<Collection<T>> {
+    const query = this.query();
+    return query.get();
   }
 
   /**
-   * Trouver un enregistrement par sa clé primaire
+   * Trouver un enregistrement par son ID
    */
-  public static async find<T extends Model>(this: new () => T, id: number | string): Promise<T | null> {
-    return this.query().find(id) as Promise<T | null>;
+  public static async find<T extends Model>(this: ModelClass<T>, id: string | number): Promise<T | null> {
+    const query = this.query();
+    return query.find(id);
   }
 
   /**
    * Trouver un enregistrement par sa clé primaire ou échouer
    */
-  public static async findOrFail<T extends Model>(this: new () => T, id: number | string): Promise<T> {
+  public static async findOrFail<T extends Model>(this: ModelClass<T>, id: number | string): Promise<T> {
     const model = await this.find<T>(id);
     
     if (!model) {
@@ -106,7 +134,7 @@ export class Model {
   /**
    * Créer un nouveau modèle et le sauvegarder dans la base de données
    */
-  public static async create<T extends Model>(this: new () => T, attributes: ModelAttributes): Promise<T> {
+  public static async create<T extends Model>(this: ModelClass<T>, attributes: ModelAttributes): Promise<T> {
     const model = new this();
     model.fill(attributes);
     await model.save();
@@ -117,7 +145,7 @@ export class Model {
    * Mettre à jour ou créer un modèle
    */
   public static async updateOrCreate<T extends Model>(
-    this: new () => T,
+    this: ModelClass<T>,
     attributes: ModelAttributes,
     values: ModelAttributes
   ): Promise<T> {
@@ -125,11 +153,12 @@ export class Model {
     
     // Ajouter les conditions de recherche
     Object.entries(attributes).forEach(([key, value]) => {
-      query.where(key, value);
+      // S'assurer que la valeur est compatible avec le type attendu par where
+      query.where(key, value as string | number | boolean | null | undefined);
     });
     
     // Chercher le modèle existant
-    const model = await query.first() as T | null;
+    const model = await query.first();
     
     if (model) {
       // Mettre à jour le modèle existant
@@ -146,22 +175,24 @@ export class Model {
    * Ajouter une clause where à la requête
    */
   public static where<T extends Model>(
-    this: new () => T,
+    this: ModelClass<T>,
     column: string,
-    operator: any,
-    value?: any
+    operator: string | number | boolean | null | undefined,
+    value?: string | number | boolean | null | undefined
   ): Query<T> {
-    return this.query().where(column, operator, value) as Query<T>;
+    const query = this.query();
+    return query.where(column, operator, value);
   }
 
   /**
    * Spécifier les relations à charger avec eager loading
    */
   public static with<T extends Model>(
-    this: new () => T,
+    this: ModelClass<T>,
     ...relations: string[]
   ): Query<T> {
-    return this.query().with(...relations) as Query<T>;
+    const query = this.query();
+    return query.with(...relations);
   }
 
   /**
@@ -178,7 +209,7 @@ export class Model {
   /**
    * Définir un attribut
    */
-  public setAttribute(key: string, value: any): this {
+  public setAttribute(key: string, value: string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[]): this {
     // Appliquer les conversions de type si nécessaire
     if (this.casts[key]) {
       value = this.castAttribute(key, value);
@@ -193,7 +224,7 @@ export class Model {
   /**
    * Obtenir un attribut
    */
-  public getAttribute(key: string): any {
+  public getAttribute(key: string): string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[] {
     // Vérifier si l'attribut existe
     if (this.attributes[key] !== undefined) {
       return this.attributes[key];
@@ -216,7 +247,7 @@ export class Model {
   /**
    * Convertir un attribut selon son type défini
    */
-  protected castAttribute(key: string, value: any): any {
+  protected castAttribute(key: string, value: unknown): string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[] {
     const type = this.casts[key];
     
     if (value === null) {
@@ -226,21 +257,24 @@ export class Model {
     switch (type) {
       case 'int':
       case 'integer':
-        return parseInt(value, 10);
+        return typeof value === 'string' || typeof value === 'number' ? parseInt(String(value), 10) : 0;
       case 'float':
       case 'double':
-        return parseFloat(value);
+        return typeof value === 'string' || typeof value === 'number' ? parseFloat(String(value)) : 0;
       case 'bool':
       case 'boolean':
         return Boolean(value);
       case 'string':
         return String(value);
       case 'array':
-        return typeof value === 'string' ? JSON.parse(value) : value;
+        if (Array.isArray(value)) return value;
+        return typeof value === 'string' ? JSON.parse(value) : [];
       case 'object':
-        return typeof value === 'string' ? JSON.parse(value) : value;
+        if (value !== null && typeof value === 'object' && !Array.isArray(value)) return value;
+        return typeof value === 'string' ? JSON.parse(value) : {};
       case 'date':
-        return new Date(value);
+        if (value instanceof Date) return value;
+        return typeof value === 'string' || typeof value === 'number' ? new Date(value) : new Date();
       default:
         return value;
     }
@@ -249,7 +283,7 @@ export class Model {
   /**
    * Obtenir la valeur de la clé primaire
    */
-  public getKey(): any {
+  public getKey(): string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[] {
     const key = (this.constructor as typeof Model).getPrimaryKey();
     return this.getAttribute(key);
   }
@@ -404,7 +438,10 @@ export class Model {
     }
     
     const modelClass = this.constructor as typeof Model;
-    const freshModel = await modelClass.find(this.getKey());
+    const key = this.getKey();
+    // Vérifier que la clé est bien une chaîne ou un nombre
+    const validKey = typeof key === 'string' || typeof key === 'number' ? key : null;
+    const freshModel = validKey !== null ? await modelClass.find(validKey) : null;
     
     if (freshModel) {
       this.attributes = { ...freshModel.attributes };
@@ -419,8 +456,8 @@ export class Model {
   /**
    * Convertir le modèle en objet JSON
    */
-  public toJson(): Record<string, any> {
-    const json: Record<string, any> = {};
+  public toJson(): Record<string, string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[] | Record<string, unknown>> {
+    const json: Record<string, string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[] | Record<string, unknown>> = {};
     
     // Déterminer quels attributs inclure
     const attributes = this.visible.length > 0
@@ -469,7 +506,7 @@ export class Model {
     }
     
     return new HasOne<T>(
-      new relatedModel().constructor as typeof Model,
+      relatedModel as unknown as typeof Model,
       this,
       foreignKey,
       localKey
@@ -496,7 +533,7 @@ export class Model {
     }
     
     return new HasMany<T>(
-      new relatedModel().constructor as typeof Model,
+      relatedModel as unknown as typeof Model,
       this,
       foreignKey,
       localKey
@@ -517,11 +554,11 @@ export class Model {
     }
     
     if (!ownerKey) {
-      ownerKey = (new relatedModel().constructor as typeof Model).getPrimaryKey();
+      ownerKey = (relatedModel as unknown as typeof Model).getPrimaryKey();
     }
     
     return new BelongsTo<T>(
-      new relatedModel().constructor as typeof Model,
+      relatedModel as unknown as typeof Model,
       this,
       foreignKey,
       ownerKey
@@ -563,11 +600,11 @@ export class Model {
     }
     
     if (!relatedKey) {
-      relatedKey = (new relatedModel().constructor as typeof Model).getPrimaryKey();
+      relatedKey = (relatedModel as unknown as typeof Model).getPrimaryKey();
     }
     
     return new BelongsToMany<T>(
-      new relatedModel().constructor as typeof Model,
+      relatedModel as unknown as typeof Model,
       this,
       pivotTable,
       foreignPivotKey,
@@ -602,14 +639,14 @@ export class Model {
   /**
    * Accesseur magique pour les attributs
    */
-  public get(key: string): any {
+  public get(key: string): string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[] {
     return this.getAttribute(key);
   }
 
   /**
    * Mutateur magique pour les attributs
    */
-  public set(key: string, value: any): void {
+  public set(key: string, value: string | number | boolean | null | undefined | Date | object | (string | number | boolean | null | undefined | Date | object)[]): void {
     this.setAttribute(key, value);
   }
 }

@@ -2,6 +2,12 @@
  * Types principaux pour Teloquent
  */
 
+// Exporter tous les types des autres fichiers
+export * from './model';
+export * from './relations';
+export * from './schema';
+export * from './teloquent';
+
 // Types de base de données supportés
 export type DatabaseDriver = 'expo' | 'react-native';
 

@@ -5,15 +5,16 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rimraf dist && tsc",
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc",
     "dev": "tsc --watch",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:integration": "jest --config jest.integration.config.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "clean": "rimraf dist coverage",
-    "docs": "typedoc --out docs/api src/index.ts",
+    "docs": "typedoc",
     "prepare": "npm run build",
     "prepublishOnly": "npm run test && npm run lint"
   },
@@ -55,6 +56,13 @@
   },
   "files": [
     "dist/**/*",
-    "README.md"
-  ]
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs/GUIDE.md"
+  ],
+  "dependencies": {
+    "@types/pluralize": "^0.0.33",
+    "pluralize": "^8.0.0"
+  }
 }
