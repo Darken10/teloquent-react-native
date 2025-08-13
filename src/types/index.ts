@@ -99,8 +99,4 @@ export interface Transaction {
 }
 
 // Types pour les migrations
-export interface MigrationOptions {
-  name: string;
-  up: (schema: any) => Promise<void>;
-  down: (schema: any) => Promise<void>;
-}
+// Déplacé vers ./types/migration.ts

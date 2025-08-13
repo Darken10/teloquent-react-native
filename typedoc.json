@@ -1,0 +1,22 @@
+{
+  "entryPoints": ["./src/index.ts"],
+  "out": "docs/api",
+  "name": "Teloquent React Native API",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "readme": "README.md",
+  "plugin": ["typedoc-plugin-markdown"],
+  "theme": "default",
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Configuration",
+    "Core",
+    "Models",
+    "Relations",
+    "Schema",
+    "Utilities",
+    "*"
+  ]
+}

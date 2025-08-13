@@ -22,6 +22,7 @@ export { BelongsToMany } from './relations/BelongsToMany';
 
 // Types
 export * from './types';
+export * from './types/migration';
 
 // Utilitaires
 export { pluralize, singularize, camelize, snakeCase, kebabCase, pascalCase } from './utils/inflector';

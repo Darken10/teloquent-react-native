@@ -5,13 +5,16 @@ Un ORM TypeScript élégant pour React Native, inspiré par Eloquent de Laravel,
 ## Caractéristiques
 
 - API fluide et intuitive similaire à Eloquent de Laravel
-- Support pour expo-sqlite et react-native-sqlite-storage
-- Migrations de base de données
-- Relations entre modèles (hasOne, hasMany, belongsTo, etc.)
-- Requêtes avancées avec une API fluide
-- Hooks et événements
-- Transactions
-- Entièrement typé avec TypeScript
+- Support complet pour expo-sqlite et react-native-sqlite-storage
+- Migrations de base de données avec suivi des versions
+- Relations entre modèles (hasOne, hasMany, belongsTo, belongsToMany)
+- Requêtes avancées avec une API fluide (where, orderBy, groupBy, having, etc.)
+- Hooks et événements sur les modèles
+- Transactions et opérations atomiques
+- Attributs accesseurs et mutateurs
+- Collections avec méthodes utilitaires
+- Utilitaires d'inflection (pluralisation, singularisation, conversion de casse)
+- Entièrement typé avec TypeScript pour une sécurité maximale
 
 ## Installation
 
@@ -119,26 +122,84 @@ const posts = await user.posts().get();
 ## Migrations
 
 ```typescript
-import { Schema } from 'teloquent-react-native';
+import { Schema, Migration } from 'teloquent-react-native';
 
-// Créer une table
-await Schema.createTable('users', (table) => {
-  table.increments('id');
-  table.string('name');
-  table.string('email').unique();
-  table.string('password');
-  table.timestamps();
-});
+// Définir une migration
+const usersMigration = {
+  name: '2025_08_01_create_users_table',
+  up: async (schema: Schema) => {
+    await schema.createTable('users', (table) => {
+      table.increments('id');
+      table.string('name');
+      table.string('email').unique();
+      table.string('password');
+      table.timestamps();
+    });
+  },
+  down: async (schema: Schema) => {
+    await schema.dropTable('users');
+  }
+};
 
-// Modifier une table
-await Schema.table('users', (table) => {
-  table.string('phone').nullable();
-});
+// Enregistrer les migrations
+Migration.register([usersMigration]);
+
+// Exécuter les migrations
+await Migration.migrate();
+
+// Annuler la dernière migration
+await Migration.rollback();
+
+// Réinitialiser toutes les migrations
+await Migration.reset();
+
+// Rafraîchir (reset + migrate)
+await Migration.refresh();
+
+// Modifier une table existante
+const addPhoneToUsers = {
+  name: '2025_08_02_add_phone_to_users',
+  up: async (schema: Schema) => {
+    await schema.table('users', (table) => {
+      table.string('phone').nullable();
+    });
+  },
+  down: async (schema: Schema) => {
+    await schema.table('users', (table) => {
+      table.dropColumn('phone');
+    });
+  }
+};
+```
+
+## Utilitaires d'inflection
+
+```typescript
+import { pluralize, singularize, camelize, snakeCase, kebabCase, pascalCase } from 'teloquent-react-native';
+
+// Pluralisation et singularisation
+pluralizer('user'); // 'users'
+pluralizer('category'); // 'categories'
+pluralizer('child'); // 'children' (gère les mots irréguliers)
+
+singularize('users'); // 'user'
+singularize('categories'); // 'category'
+singularize('children'); // 'child'
+
+// Conversion de casse
+camelize('user_name'); // 'userName'
+snakeCase('userName'); // 'user_name'
+kebabCase('userName'); // 'user-name'
+pascalCase('user_name'); // 'UserName'
 ```
 
 ## Documentation complète
 
-Pour une documentation complète, visitez [le site de documentation](https://teloquent-docs.example.com).
+Pour une documentation complète, consultez le fichier [GUIDE.md](./docs/GUIDE.md) inclus dans ce package.
+
+## Contribution
+
+Les contributions sont les bienvenues ! Consultez [CONTRIBUTING.md](./CONTRIBUTING.md) pour plus d'informations.
 
 ## Licence
 
