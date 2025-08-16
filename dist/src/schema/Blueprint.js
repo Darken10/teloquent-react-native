@@ -268,11 +268,11 @@ class Blueprint {
      * Générer l'instruction SQL pour créer une table
      */
     createTableSql() {
-        const columnDefinitions = this.columns.map(column => {
+        // 1) Colonnes
+        const columnSqlParts = this.columns.map(column => {
             let sql = `${column.name} ${this.getColumnType(column)}`;
             if (column.primaryKey) {
                 sql += ' PRIMARY KEY';
-                // Ajouter AUTOINCREMENT pour les clés primaires de type integer
                 if (column.type === 'integer') {
                     sql += ' AUTOINCREMENT';
                 }
@@ -287,9 +287,24 @@ class Blueprint {
                 sql += ' UNIQUE';
             }
             return sql;
-        }).join(', ');
+        });
+        // 2) Contraintes de clés étrangères (SQLite: doivent être dans CREATE TABLE)
+        const fkSqlParts = [];
+        this.columns.forEach(column => {
+            if (column.references && column.references.table && column.references.column) {
+                let fk = `FOREIGN KEY (${column.name}) REFERENCES ${column.references.table} (${column.references.column})`;
+                if (column.onDelete) {
+                    fk += ` ON DELETE ${column.onDelete}`;
+                }
+                if (column.onUpdate) {
+                    fk += ` ON UPDATE ${column.onUpdate}`;
+                }
+                fkSqlParts.push(fk);
+            }
+        });
+        const allParts = [...columnSqlParts, ...fkSqlParts];
         return {
-            sql: `CREATE TABLE IF NOT EXISTS ${this.tableName} (${columnDefinitions})`,
+            sql: `CREATE TABLE IF NOT EXISTS ${this.tableName} (${allParts.join(', ')})`,
             params: []
         };
     }
@@ -303,21 +318,6 @@ class Blueprint {
             if (column.index && !column.primaryKey && !column.unique) {
                 statements.push({
                     sql: `CREATE INDEX IF NOT EXISTS idx_${this.tableName}_${column.name} ON ${this.tableName} (${column.name})`,
-                    params: []
-                });
-            }
-            // Ajouter les contraintes de clé étrangère
-            if (column.references) {
-                let sql = `ALTER TABLE ${this.tableName} ADD CONSTRAINT fk_${this.tableName}_${column.name} `;
-                sql += `FOREIGN KEY (${column.name}) REFERENCES ${column.references.table} (${column.references.column})`;
-                if (column.onDelete) {
-                    sql += ` ON DELETE ${column.onDelete}`;
-                }
-                if (column.onUpdate) {
-                    sql += ` ON UPDATE ${column.onUpdate}`;
-                }
-                statements.push({
-                    sql,
                     params: []
                 });
             }
