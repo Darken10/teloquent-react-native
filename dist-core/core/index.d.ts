@@ -5,4 +5,3 @@ export * from './Model';
 export * from './Collection';
 export * from './Query';
 export * from './DB';
-export * from './Teloquent';

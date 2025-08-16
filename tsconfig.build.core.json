@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-core",
+    "declaration": true,
+    "emitDeclarationOnly": false,
+    "noEmit": false,
+    "stripInternal": false
+  },
+  "include": [
+    "src/core/**/*",
+    "src/types/**/*"
+  ],
+  "exclude": [
+    "src/relations/**/*",
+    "src/schema/**/*",
+    "src/query/**/*",
+    "src/teloquent.ts",
+    "src/index.ts",
+    "src/examples/**/*",
+    "src/__tests__/**/*"
+  ]
+}
