@@ -1,8 +1,9 @@
 /**
  * Types pour les relations entre modèles
  */
-import { Model } from '../model';
+import { Model } from '../core/Model';
 import { QueryBuilder } from '../query/query-builder';
+import { Collection } from '../core/Collection';
 
 /**
  * Interface pour la relation HasOne
@@ -14,9 +15,9 @@ export interface HasOneRelation<T extends Model> {
   first(): Promise<T | null>;
   
   /**
-   * Obtient tous les résultats de la relation (normalement un seul pour HasOne)
+   * Obtient tous les résultats de la relation (normalement 0 ou 1 pour HasOne)
    */
-  get(): Promise<T[]>;
+  get(): Promise<Collection<T>>;
   
   /**
    * Crée une nouvelle instance liée à cette relation
@@ -30,14 +31,14 @@ export interface HasOneRelation<T extends Model> {
    * @param operator Opérateur de comparaison
    * @param value Valeur à comparer
    */
-  where(column: string, operator: string | any, value?: any): QueryBuilder<T>;
+  where(column: string, operator: string | any, value?: any): HasOneRelation<T>;
   
   /**
    * Applique un ordre à la requête
    * @param column Nom de la colonne
    * @param direction Direction du tri (asc ou desc)
    */
-  orderBy(column: string, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+  orderBy(column: string, direction?: 'asc' | 'desc'): HasOneRelation<T>;
 }
 
 /**
@@ -52,7 +53,7 @@ export interface HasManyRelation<T extends Model> {
   /**
    * Obtient tous les résultats de la relation
    */
-  get(): Promise<T[]>;
+  get(): Promise<Collection<T>>;
   
   /**
    * Crée une nouvelle instance liée à cette relation
@@ -66,26 +67,26 @@ export interface HasManyRelation<T extends Model> {
    * @param operator Opérateur de comparaison
    * @param value Valeur à comparer
    */
-  where(column: string, operator: string | any, value?: any): QueryBuilder<T>;
+  where(column: string, operator: string | any, value?: any): HasManyRelation<T>;
   
   /**
    * Applique un ordre à la requête
    * @param column Nom de la colonne
    * @param direction Direction du tri (asc ou desc)
    */
-  orderBy(column: string, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+  orderBy(column: string, direction?: 'asc' | 'desc'): HasManyRelation<T>;
   
   /**
    * Limite le nombre de résultats
    * @param limit Nombre maximum de résultats
    */
-  limit(limit: number): QueryBuilder<T>;
+  limit(limit: number): HasManyRelation<T>;
   
   /**
    * Décale les résultats
    * @param offset Nombre de résultats à sauter
    */
-  offset(offset: number): QueryBuilder<T>;
+  offset(offset: number): HasManyRelation<T>;
   
   /**
    * Compte le nombre de résultats
@@ -103,9 +104,9 @@ export interface BelongsToRelation<T extends Model> {
   first(): Promise<T | null>;
   
   /**
-   * Obtient tous les résultats de la relation (normalement un seul pour BelongsTo)
+   * Obtient tous les résultats de la relation (normalement 0 ou 1 pour BelongsTo)
    */
-  get(): Promise<T[]>;
+  get(): Promise<Collection<T>>;
   
   /**
    * Applique des conditions à la requête
@@ -113,18 +114,18 @@ export interface BelongsToRelation<T extends Model> {
    * @param operator Opérateur de comparaison
    * @param value Valeur à comparer
    */
-  where(column: string, operator: string | any, value?: any): QueryBuilder<T>;
+  where(column: string, operator: string | any, value?: any): BelongsToRelation<T>;
   
   /**
    * Associe le modèle parent à cette relation
    * @param model Modèle parent ou ID du modèle parent
    */
-  associate(model: T | number): Promise<void>;
+  associate(model: T): Promise<Model>;
   
   /**
    * Dissocie le modèle parent de cette relation
    */
-  dissociate(): Promise<void>;
+  dissociate(): Promise<Model>;
 }
 
 /**
@@ -139,7 +140,7 @@ export interface BelongsToManyRelation<T extends Model> {
   /**
    * Obtient tous les résultats de la relation
    */
-  get(): Promise<T[]>;
+  get(): Promise<Collection<T>>;
   
   /**
    * Applique des conditions à la requête
@@ -147,46 +148,49 @@ export interface BelongsToManyRelation<T extends Model> {
    * @param operator Opérateur de comparaison
    * @param value Valeur à comparer
    */
-  where(column: string, operator: string | any, value?: any): QueryBuilder<T>;
+  where(column: string, operator: string | any, value?: any): this;
   
   /**
    * Applique un ordre à la requête
    * @param column Nom de la colonne
    * @param direction Direction du tri (asc ou desc)
    */
-  orderBy(column: string, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+  orderBy(column: string, direction?: 'asc' | 'desc'): this;
   
   /**
    * Attache des modèles à cette relation
    * @param ids IDs des modèles à attacher ou objets avec IDs et attributs pivot
    * @param pivotAttributes Attributs supplémentaires pour la table pivot
    */
-  attach(ids: number[] | Record<number, Record<string, any>>, pivotAttributes?: Record<string, any>): Promise<void>;
+  attach(
+    id: number | string | T | (number | string | T)[],
+    pivotAttributes?: Record<string, any>
+  ): Promise<void>;
   
   /**
    * Détache des modèles de cette relation
    * @param ids IDs des modèles à détacher (tous si non spécifié)
    */
-  detach(ids?: number[]): Promise<void>;
+  detach(id?: number | string | T | (number | string | T)[] | null): Promise<void>;
   
   /**
    * Synchronise les modèles de cette relation
    * @param ids IDs des modèles à synchroniser
    * @param detaching Si true, détache les modèles qui ne sont pas dans ids
    */
-  sync(ids: number[], detaching?: boolean): Promise<void>;
+  sync(ids: (number | string | T)[], pivotAttributes?: Record<string, any>): Promise<void>;
   
   /**
    * Bascule les modèles de cette relation
    * @param ids IDs des modèles à basculer
    */
-  toggle(ids: number[]): Promise<void>;
+  toggle(ids: (number | string | T)[]): Promise<void>;
   
   /**
    * Inclut les colonnes de la table pivot dans les résultats
    * @param columns Noms des colonnes pivot à inclure
    */
-  withPivot(columns: string[]): BelongsToManyRelation<T>;
+  withPivot(columns: string[]): this;
   
   /**
    * Applique des conditions sur la table pivot
@@ -194,7 +198,7 @@ export interface BelongsToManyRelation<T extends Model> {
    * @param operator Opérateur de comparaison
    * @param value Valeur à comparer
    */
-  wherePivot(column: string, operator: string | any, value?: any): BelongsToManyRelation<T>;
+  wherePivot(column: string, operator: string | any, value?: any): this;
 }
 
 /**
@@ -243,11 +247,6 @@ export interface RelationMethods {
     relatedKey?: string
   ): BelongsToManyRelation<T>;
 }
-
-/**
- * Extension du modèle de base avec les méthodes de relation
- */
-export interface ModelWithRelations extends Model, RelationMethods {}
 
 /**
  * Type pour les méthodes statiques de relation dans les modèles

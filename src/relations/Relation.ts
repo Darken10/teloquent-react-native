@@ -28,7 +28,7 @@ export abstract class Relation<T extends Model = Model> {
   /**
    * Obtenir les résultats de la relation
    */
-  public abstract getResults(): Promise<T | Collection<T>>;
+  public abstract getResults(): Promise<T | Collection<T> | null>;
 
   /**
    * Obtenir la requête de base pour la relation

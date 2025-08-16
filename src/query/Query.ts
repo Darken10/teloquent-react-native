@@ -84,7 +84,7 @@ export class Query<T extends Model> extends QueryBuilder<T> {
       });
       
       // Marquer le modèle comme existant
-      model.exists = true;
+      (model as any).setExists ? (model as any).setExists(true) : (model as any).exists = true;
       
       return model;
     });

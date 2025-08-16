@@ -3,6 +3,7 @@
  */
 import { QueryBuilder } from '../query/query-builder';
 import { RelationMethods, StaticRelationMethods } from './relations';
+import { Model } from '../core/Model';
 
 /**
  * Interface pour les attributs de modèle
@@ -199,7 +200,7 @@ export interface ModelMethods {
 /**
  * Interface pour les méthodes statiques de modèle
  */
-export interface StaticModelMethods<T> {
+export interface StaticModelMethods<T extends Model> {
   /**
    * Crée une nouvelle instance du modèle
    * @param attributes Attributs initiaux
@@ -313,7 +314,7 @@ export interface ModelInterface extends ModelMethods, RelationMethods, ModelEven
 /**
  * Interface pour la classe de modèle
  */
-export interface ModelClass<T extends ModelInterface> extends StaticModelMethods<T>, StaticRelationMethods {
+export interface ModelClass<T extends Model> extends StaticModelMethods<T>, StaticRelationMethods {
   new (attributes?: ModelAttributes): T;
   
   /**
@@ -369,5 +370,5 @@ export interface ModelClass<T extends ModelInterface> extends StaticModelMethods
   /**
    * Relations à charger automatiquement
    */
-  with: string[];
+  withRelations: string[];
 }

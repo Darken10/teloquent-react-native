@@ -46,7 +46,7 @@ export class HasMany<T extends Model = Model> extends Relation<T> {
     }
 
     // Obtenir toutes les clés parentes
-    const parentKeys = collection.pluck(this.localKey);
+    const parentKeys = collection.pluck(this.localKey) as (string | number)[];
     
     // Créer une nouvelle requête sans les contraintes précédentes
     const query = new (this.query.constructor as any)(this.relatedModel, this.relatedModel.getTable());
@@ -66,8 +66,8 @@ export class HasMany<T extends Model = Model> extends Relation<T> {
     // Grouper les résultats par clé étrangère
     const dictionary: Record<string, T[]> = {};
     
-    results.each(model => {
-      const key = model.getAttribute(this.foreignKey);
+    results.each((model: T) => {
+      const key = String(model.getAttribute(this.foreignKey));
       
       if (!dictionary[key]) {
         dictionary[key] = [];
@@ -77,10 +77,11 @@ export class HasMany<T extends Model = Model> extends Relation<T> {
     });
     
     // Associer les résultats aux modèles parents
-    collection.each(model => {
-      const key = model.getAttribute(this.localKey);
+    collection.each((model: Model) => {
+      const key = String(model.getAttribute(this.localKey));
       const relationModels = dictionary[key] || [];
-      model.relations[relationName.split('.')[0]] = new Collection<T>(relationModels);
+      const baseName = relationName.split('.')[0];
+      model.setRelation(baseName, new Collection<T>(relationModels));
     });
   }
 

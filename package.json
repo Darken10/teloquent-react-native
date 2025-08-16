@@ -2,9 +2,9 @@
   "name": "teloquent-react-native",
   "version": "1.0.0",
   "description": "Un ORM TypeScript moderne pour React Native avec support SQLite (expo-sqlite, react-native-sqlite-storage)",
-  "main": "src/core/index.ts",
-  "types": "src/core/index.ts",
-  "react-native": "src/core/index.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "react-native": "src/index.ts",
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && tsc",

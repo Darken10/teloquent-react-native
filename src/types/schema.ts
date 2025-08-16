@@ -1,7 +1,7 @@
 /**
  * Types pour le système de schéma de base de données
  */
-import { Blueprint } from '../schema/blueprint';
+import { Blueprint } from '../schema/Blueprint';
 
 /**
  * Interface pour les fonctions de schéma

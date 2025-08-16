@@ -3,6 +3,7 @@
  */
 import { Model } from '../core/Model';
 import { WhereCondition, OrderByClause } from '../types';
+import { Collection } from '../core/Collection';
 
 /**
  * Interface pour le constructeur de requêtes
@@ -223,7 +224,7 @@ export class QueryBuilder<T extends Model> {
    */
   async first(): Promise<T | null> {
     const results = await this.limit(1).get();
-    return results.length > 0 ? results[0] : null;
+    return results.first() || null;
   }
 
   /**
@@ -240,10 +241,10 @@ export class QueryBuilder<T extends Model> {
   /**
    * Récupère tous les résultats de la requête
    */
-  async get(): Promise<T[]> {
+  async get(): Promise<Collection<T>> {
     // Cette méthode serait implémentée dans la classe concrète
-    // Ici, nous retournons juste un tableau vide pour la déclaration de type
-    return [] as T[];
+    // Ici, nous retournons juste une Collection vide pour la déclaration de type
+    return new Collection<T>([]);
   }
 
   /**

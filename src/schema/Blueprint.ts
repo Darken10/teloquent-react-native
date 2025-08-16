@@ -11,7 +11,7 @@ interface SqlStatement {
 export class Blueprint {
   protected tableName: string;
   protected columns: ColumnDefinition[] = [];
-  protected commands: Array<{ type: string; name?: string }> = [];
+  protected commands: Array<{ type: string; name?: string; to?: string }> = [];
   protected isModification: boolean;
 
   /**

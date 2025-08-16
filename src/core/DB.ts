@@ -96,9 +96,10 @@ export class DB {
     if (DB._config?.driver === 'expo') {
       return result.rows._array || [];
     } else if (DB._config?.driver === 'react-native') {
-      const rows = [];
-      for (let i = 0; i < result[0].rows.length; i++) {
-        rows.push(result[0].rows.item(i));
+      const r = result as any; // react-native-sqlite-storage retourne [result]
+      const rows: any[] = [];
+      for (let i = 0; i < r[0].rows.length; i++) {
+        rows.push(r[0].rows.item(i));
       }
       return rows;
     }
@@ -121,7 +122,8 @@ export class DB {
     if (DB._config?.driver === 'expo') {
       return result.insertId || 0;
     } else if (DB._config?.driver === 'react-native') {
-      return result[0].insertId || 0;
+      const r = result as any;
+      return r[0].insertId || 0;
     }
     
     return 0;
@@ -143,7 +145,8 @@ export class DB {
     if (DB._config?.driver === 'expo') {
       return result.rowsAffected || 0;
     } else if (DB._config?.driver === 'react-native') {
-      return result[0].rowsAffected || 0;
+      const r = result as any;
+      return r[0].rowsAffected || 0;
     }
     
     return 0;
@@ -160,7 +163,8 @@ export class DB {
     if (DB._config?.driver === 'expo') {
       return result.rowsAffected || 0;
     } else if (DB._config?.driver === 'react-native') {
-      return result[0].rowsAffected || 0;
+      const r = result as any;
+      return r[0].rowsAffected || 0;
     }
     
     return 0;

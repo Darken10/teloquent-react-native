@@ -7,6 +7,7 @@ export * from './model';
 export * from './relations';
 export * from './schema';
 export * from './teloquent';
+export * from './migration';
 
 // Types de base de données supportés
 export type DatabaseDriver = 'expo' | 'react-native';

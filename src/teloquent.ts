@@ -1,10 +1,10 @@
 /**
  * Classe principale Teloquent - Point d'entrée de l'ORM
  */
-import { ConnectionConfig, Transaction } from './types';
+import { ConnectionConfig } from './types';
 import { DB } from './core/DB';
 import { Schema } from './schema/Schema';
-import { Migration } from './migrations/Migration';
+import { Migration } from './schema/Migration';
 
 export class Teloquent {
   /**
@@ -12,20 +12,7 @@ export class Teloquent {
    */
   private static instance: Teloquent;
 
-  /**
-   * Base de données
-   */
-  private db: DB;
-
-  /**
-   * Gestionnaire de schéma
-   */
-  private schemaInstance: Schema;
-
-  /**
-   * Gestionnaire de migrations
-   */
-  private migrationInstance: Migration;
+  // Plus d'instances directes: DB/Schema/Migration sont utilisés en statique
 
   /**
    * Configuration
@@ -37,9 +24,7 @@ export class Teloquent {
    */
   private constructor(config: ConnectionConfig) {
     this.config = config;
-    this.db = new DB(config);
-    this.schemaInstance = new Schema(this.db);
-    this.migrationInstance = new Migration(this.db, this.schemaInstance);
+    DB.initialize(config);
   }
 
   /**
@@ -66,44 +51,25 @@ export class Teloquent {
   }
 
   /**
-   * Obtenir l'instance de base de données
+   * Accès à la classe DB (statique)
    */
-  public getDB(): DB {
-    return this.db;
+  public getDB(): typeof DB {
+    return DB;
   }
 
   /**
-   * Obtenir l'instance de schéma
+   * Accès au gestionnaire de schéma (statique)
    */
-  public schema(): Schema {
-    return this.schemaInstance;
+  public schema(): typeof Schema {
+    return Schema;
   }
 
   /**
-   * Obtenir l'instance de migration
+   * Accès au gestionnaire de migrations (statique)
    */
-  public migration(): Migration {
-    return this.migrationInstance;
+  public migration(): typeof Migration {
+    return Migration;
   }
 
-  /**
-   * Démarrer une transaction
-   */
-  public async transaction<T>(callback: (trx: Transaction) => Promise<T>): Promise<T> {
-    return this.db.transaction(callback);
-  }
-
-  /**
-   * Activer ou désactiver les logs SQL
-   */
-  public enableLogging(enable: boolean = true): void {
-    this.db.enableLogging(enable);
-  }
-
-  /**
-   * Fermer la connexion à la base de données
-   */
-  public async close(): Promise<void> {
-    await this.db.close();
-  }
+  // Les transactions, logs et fermeture de connexion ne sont pas exposés ici.
 }

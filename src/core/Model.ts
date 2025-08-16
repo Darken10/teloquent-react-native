@@ -71,6 +71,32 @@ export class Model {
   constructor(attributes: ModelAttributes = {}) {
     this.fill(attributes);
   }
+  
+  /**
+   * Définir une relation chargée sur le modèle
+   */
+  public setRelation(name: string, value: Model | Collection<Model> | null): void {
+    this.relations[name] = value as any;
+  }
+
+  /**
+   * Définir l'état d'existence du modèle (persisté en base)
+   */
+  public setExists(value: boolean): void {
+    this.exists = value;
+  }
+
+  /**
+   * Supprimer un attribut de manière sûre
+   */
+  public unsetAttribute(key: string): void {
+    if (key in this.attributes) {
+      delete this.attributes[key];
+    }
+    if (key in this.changes) {
+      delete this.changes[key];
+    }
+  }
 
   /**
    * Obtenir le nom de la table pour ce modèle
@@ -237,8 +263,9 @@ export class Model {
     
     // Vérifier s'il y a un accesseur pour cet attribut
     const accessor = `get${key.charAt(0).toUpperCase() + key.slice(1)}Attribute`;
-    if (typeof this[accessor] === 'function') {
-      return this[accessor]();
+    const fn = (this as any)[accessor];
+    if (typeof fn === 'function') {
+      return fn.call(this);
     }
     
     return undefined;

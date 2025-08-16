@@ -63,14 +63,15 @@ export class HasOne<T extends Model = Model> extends Relation<T> {
     // Exécuter la requête
     const results = await query.get();
     
-    // Indexer les résultats par clé étrangère
-    const dictionary = results.keyBy(model => model.getAttribute(this.foreignKey));
+    // Indexer les résultats par clé étrangère (clé en string)
+    const dictionary = results.keyBy((m: T) => String(m.getAttribute(this.foreignKey)));
     
     // Associer les résultats aux modèles parents
-    collection.each(model => {
+    collection.each((model: Model) => {
       const key = model.getAttribute(this.localKey);
-      const relation = dictionary[key] || null;
-      model.relations[relationName.split('.')[0]] = relation;
+      const relation = dictionary[String(key)] || null;
+      const baseName = relationName.split('.')[0];
+      model.setRelation(baseName, relation);
     });
   }
 

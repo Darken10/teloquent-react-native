@@ -200,17 +200,15 @@ export class BelongsToMany<T extends Model = Model> extends Relation<T> {
    * Convertir les entrées en IDs
    */
   protected convertToIds(value: number | string | T | (number | string | T)[]): (number | string)[] {
-    if (!Array.isArray(value)) {
-      value = [value];
-    }
-    
-    return value.map(item => {
+    const arr = Array.isArray(value) ? value : [value];
+    const ids = arr.map((item): unknown => {
       if (item instanceof Model) {
         return item.getAttribute(this.relatedKey);
       }
-      
       return item;
     });
+    // Garder uniquement string|number
+    return ids.filter((v): v is string | number => typeof v === 'string' || typeof v === 'number');
   }
 
   /**
@@ -222,7 +220,8 @@ export class BelongsToMany<T extends Model = Model> extends Relation<T> {
     }
 
     // Obtenir toutes les clés parentes
-    const parentKeys = collection.pluck(this.parentKey);
+    const rawParentKeys = collection.pluck(this.parentKey) as Array<string | number | boolean | object | null | undefined>;
+    const parentKeys = rawParentKeys.filter((v): v is string | number => typeof v === 'string' || typeof v === 'number');
     
     // Créer une nouvelle requête sans les contraintes précédentes
     const query = new (this.query.constructor as any)(this.relatedModel, this.relatedModel.getTable());
@@ -263,8 +262,8 @@ export class BelongsToMany<T extends Model = Model> extends Relation<T> {
     // Grouper les résultats par clé étrangère pivot
     const dictionary: Record<string, T[]> = {};
     
-    results.each(model => {
-      const pivotForeignKey = model.getAttribute(`pivot_${this.foreignPivotKey}`);
+    results.each((model: T) => {
+      const pivotForeignKey = String(model.getAttribute(`pivot_${this.foreignPivotKey}`));
       
       if (!dictionary[pivotForeignKey]) {
         dictionary[pivotForeignKey] = [];
@@ -272,23 +271,24 @@ export class BelongsToMany<T extends Model = Model> extends Relation<T> {
       
       // Extraire les attributs pivot
       const pivotAttributes: Record<string, any> = {};
-      pivotColumns.forEach(column => {
+      pivotColumns.forEach((column: string) => {
         pivotAttributes[column] = model.getAttribute(`pivot_${column}`);
         // Supprimer l'attribut pivot du modèle
-        delete model.attributes[`pivot_${column}`];
+        model.unsetAttribute(`pivot_${column}`);
       });
       
       // Ajouter les attributs pivot au modèle
-      model.pivot = pivotAttributes;
+      model.setAttribute('pivot', pivotAttributes as any);
       
       dictionary[pivotForeignKey].push(model);
     });
     
     // Associer les résultats aux modèles parents
-    collection.each(model => {
-      const key = model.getAttribute(this.parentKey);
+    collection.each((model: Model) => {
+      const key = String(model.getAttribute(this.parentKey));
       const relationModels = dictionary[key] || [];
-      model.relations[relationName.split('.')[0]] = new Collection<T>(relationModels);
+      const baseName = relationName.split('.')[0];
+      model.setRelation(baseName, new Collection<T>(relationModels));
     });
   }
 
