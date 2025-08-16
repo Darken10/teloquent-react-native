@@ -1,4 +1,4 @@
-import { Query } from '../query/Query';
+import { Query } from './Query';
 import { Collection } from './Collection';
 import { ModelAttributes, ModelEvent } from '../types';
 import { HasOne } from '../relations/HasOne';

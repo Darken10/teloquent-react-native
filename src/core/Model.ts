@@ -2,7 +2,7 @@
  * Classe Model - La classe de base pour tous les modèles Teloquent
  */
 import { DB } from './DB';
-import { Query } from '../query/Query';
+import { Query } from './Query';
 import { Collection } from './Collection';
 import { ModelAttributes, ModelEvent } from '../types';
 import pluralize from 'pluralize';

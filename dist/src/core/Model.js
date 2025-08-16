@@ -8,7 +8,7 @@ exports.Model = void 0;
  * Classe Model - La classe de base pour tous les modèles Teloquent
  */
 const DB_1 = require("./DB");
-const Query_1 = require("../query/Query");
+const Query_1 = require("./Query");
 const Collection_1 = require("./Collection");
 const pluralize_1 = __importDefault(require("pluralize"));
 const inflector_1 = require("../utils/inflector");
